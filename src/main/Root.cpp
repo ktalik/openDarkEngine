@@ -89,8 +89,9 @@ namespace Opde {
 			mDirArchiveFactory(NULL),
 			mCrfArchiveFactory(NULL),
 			mResourceGroupManager(NULL),
-			mArchiveManager(NULL) {
-
+			mArchiveManager(NULL),
+            mOverlaySystem(NULL)
+    {
 		mLogger = new Logger();
 
 		if (logFileName) {
@@ -100,7 +101,7 @@ namespace Opde {
 		LOG_INFO("Root: Starting openDarkEngine %d.%d.%d (%s), build %s, %s", OPDE_VER_MAJOR, OPDE_VER_MINOR, OPDE_VER_PATCH, OPDE_CODE_NAME, __DATE__, __TIME__);
 
 		mServiceMgr = new ServiceManager(mServiceMask);
-		
+
 		LOG_INFO("Root: Created a ServiceManager instance with global mask %X", mServiceMask);
 
 		LOG_INFO("Root: Hooking up the Ogre logging");
@@ -128,9 +129,11 @@ namespace Opde {
 		LOG_INFO("Root: Registering custom archive factories");
 		// register the factories
 		mDirArchiveFactory = new Ogre::CaseLessFileSystemArchiveFactory();
+		mZipArchiveFactory = new Ogre::FixedZipArchiveFactory();
 		mCrfArchiveFactory = new Ogre::CrfArchiveFactory();
 
 		Ogre::ArchiveManager::getSingleton().addArchiveFactory(mDirArchiveFactory);
+		Ogre::ArchiveManager::getSingleton().addArchiveFactory(mZipArchiveFactory);
 		Ogre::ArchiveManager::getSingleton().addArchiveFactory(mCrfArchiveFactory);
 
 		if (serviceMask & SERVICE_RENDERER) {
@@ -138,6 +141,11 @@ namespace Opde {
 			// if custom image hooks are to be included, setup now
 			Ogre::CustomImageCodec::startup();
 		}
+
+		LOG_INFO("Root: Creating overlay system");
+
+		mOverlaySystem = new Ogre::OverlaySystem();
+#warning do this: m_pSceneMgr->addRenderQueueListener(pOverlaySystem);
 
 		LOG_INFO("Root: Creating console backend");
 
@@ -167,14 +175,14 @@ namespace Opde {
 #endif
 		// Archive manager has no way to remove the archive factories...
 		delete mServiceMgr;
-		
+
 		// delete all the service factories
 		ServiceFactoryList::iterator sit = mServiceFactories.begin();
 
 		while (sit != mServiceFactories.end()) {
 			delete *sit++;
 		}
-		
+
 		mServiceFactories.clear();
 
 		delete mConsoleBackend;
@@ -182,7 +190,8 @@ namespace Opde {
 		if (mServiceMask & SERVICE_RENDERER) {
 			Ogre::CustomImageCodec::shutdown();
 		}
-		
+
+		delete mOverlaySystem;
 		delete mOgreRoot;
 		delete mResourceGroupManager;
 		delete mArchiveManager;
@@ -197,6 +206,7 @@ namespace Opde {
 
 		delete mDirArchiveFactory;
 		delete mCrfArchiveFactory;
+		delete mZipArchiveFactory;
 
 		// As the last thing - release the logger
 		delete mLogger;
@@ -243,7 +253,7 @@ namespace Opde {
 
 	// -------------------------------------------------------
 	void Root::loadPLDefScript(const std::string& fileName, const std::string& groupName) {
-#ifdef SCRIPT_COMPILERS	
+#ifdef SCRIPT_COMPILERS
 		// try to open the given resource stream
 		Ogre::DataStreamPtr str = Ogre::ResourceGroupManager::getSingleton().openResource(fileName, groupName, true, NULL);
 		mPLDefScriptCompiler->parseScript(str, groupName);
@@ -317,9 +327,9 @@ namespace Opde {
 		mServiceFactories.push_back(new RoomServiceFactory());
 		// mServiceFactories.push_back(new GUIServiceFactory());
 		mServiceFactories.push_back(new PlatformServiceFactory());
-		
+
 		ServiceFactoryList::iterator it = mServiceFactories.begin();
-		
+
 		while (it != mServiceFactories.end()) {
 			mServiceMgr->addServiceFactory(*it++);
 		}

@@ -7,39 +7,31 @@ $Id$
 */
 
 #include "SubEntityMaterialInstance.h"
+#include "logger.h"
 
 #include <OgreSubEntity.h>
 
+using namespace Opde;
 using namespace Ogre;
 
 SubEntityMaterialInstance::SubEntityMaterialInstance (SubEntity *se) : MaterialInstance () {
 	mSubEntity = se;
-      
+
 	initOriginalMaterial ();
 }
 
 SubEntityMaterialInstance::~SubEntityMaterialInstance () {
 	// Reset to the original material
-	mSubEntity->setMaterialName (mOriginalMat->getName ());
-}
-
-void SubEntityMaterialInstance::setMaterialName (String name) {
-	clearCopyMaterial ();
-      
-	mSubEntity->setMaterialName (name);
-	  
-	initOriginalMaterial ();
-	  
-	setTransparency (mCurrentTransparency);
+	mSubEntity->setMaterial(mOriginalMat);
 }
 
 void SubEntityMaterialInstance::setTransparency (Real transparency) {
 	MaterialInstance::setTransparency (transparency);
 
 	if (hasOverrides()) {
-		mSubEntity->setMaterialName (mCopyMat->getName ());
+		mSubEntity->setMaterial (mCopyMat);
 	} else {
-		mSubEntity->setMaterialName (mOriginalMat->getName ());
+		mSubEntity->setMaterial (mOriginalMat);
 	}
 }
 
@@ -47,13 +39,12 @@ void SubEntityMaterialInstance::setZBias (Ogre::Real zbias) {
 	MaterialInstance::setZBias (zbias);
 
 	if (hasOverrides()) {
-		mSubEntity->setMaterialName (mCopyMat->getName ());
+		mSubEntity->setMaterial (mCopyMat);
 	} else {
-		mSubEntity->setMaterialName (mOriginalMat->getName ());
+		mSubEntity->setMaterial (mOriginalMat);
 	}
 }
 
 void SubEntityMaterialInstance::initOriginalMaterial () {
-	mOriginalMat = MaterialManager::getSingleton ().getByName (mSubEntity->getMaterialName ());
+	mOriginalMat = mSubEntity->getMaterial();
 }
-
