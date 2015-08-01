@@ -24,7 +24,6 @@
 #include "config.h"
 
 #include "GamePlayState.h"
-#include "OIS.h"
 #include "GameStateManager.h"
 
 #include "GameLoadState.h"
@@ -40,7 +39,6 @@
 #include <OgreStringConverter.h>
 
 using namespace Ogre;
-using namespace OIS;
 
 namespace Opde {
 
@@ -53,8 +51,8 @@ namespace Opde {
 		Opde::ConsoleBackend::getSingleton().registerCommandListener("fps", dynamic_cast<ConsoleCommandListener*>(this));
 		Opde::ConsoleBackend::getSingleton().setCommandHint("fps", "Dump FPS stats");
 
-		mRotateSpeed = 36;
-		mMoveSpeed = 50;
+		mRotateSpeed = 500;
+		mMoveSpeed = 25;
 		mRotateYFactor = 1;
 
 		mShadows = false;
@@ -113,7 +111,7 @@ namespace Opde {
 		LOG_INFO("GamePlayState: Starting");
 		PropertyServicePtr ps = GET_SERVICE(PropertyService);
 		Property* posPG = ps->getProperty("Position");
-		
+
 		InputServicePtr inputSrv = GET_SERVICE(InputService);
 		inputSrv->processCommand("bind ` show_console");
 
@@ -194,17 +192,17 @@ namespace Opde {
 
 		TextureAtlas* ta = mDrawService->createAtlas();
 		TextureAtlas* ta1 = mDrawService->createAtlas();
-		
+
 		DrawSource* ds = ta->createDrawSource("access.pcx", "General");
 		// testing what happens when a font is loaded (e.g. where it segv's)
 		mDrawService->setFontPalette(Ogre::ManualFonFileLoader::ePT_PCX, "fontpal.pcx", "General");
 		FontDrawSource* fds = mDrawService->loadFont(ta, "fonts/MAINFONT.FON" , "General");
 		FontDrawSource* fds1 = mDrawService->loadFont(ta, "fonts/MAINAA.FON" , "General");
 		FontDrawSource* fds2 = mDrawService->loadFont(ta, "fonts/keyfonta.FON" , "General");
-		
+
 		ta->build();
 		ta1->build();
-		
+
 		RenderedLabel* rl = mDrawService->createRenderedLabel(fds, "OpenDarkEngine test");
 
 		mRl1 = mDrawService->createRenderedLabel(fds, "TEST 2");
@@ -217,7 +215,7 @@ namespace Opde {
 		ri->setPosition(100, 250);
 
 
-		
+
 		rl->setPosition(250, 100);
 		mRl1->setPosition(0, 0);
 		mRl2->setPosition(0, 12);
@@ -251,7 +249,7 @@ namespace Opde {
 
 		if (mPortalOverlay)
 			mPortalOverlay->hide();
-			
+
 		if (mDebugOverlay)
 			mDebugOverlay->hide();
 		/*mConsole->setActive(false);
@@ -277,13 +275,8 @@ namespace Opde {
 	}
 
 	void GamePlayState::update(unsigned long timePassed) {
-		if (timePassed == 0) {
-			mMoveScale = 0.1f;
-			mRotScale = 0.1f;
-		} else {
-			mMoveScale = mMoveSpeed * timePassed / 1000.0f;
-			mRotScale = mRotateSpeed * timePassed / 1000.0f;
-		}
+        mMoveScale = mMoveSpeed * timePassed / 1000000.0f;
+        mRotScale = mRotateSpeed * timePassed / 1000000.0f;
 
 		// Quick hack. Let the camera move:
 		if (mForward)
@@ -435,130 +428,72 @@ namespace Opde {
 		}
 	}
 
-	bool GamePlayState::keyPressed( const OIS::KeyEvent &e ) {
-		/*if( e.key == KC_F10 ) {
-			mConsole->setActive(!mConsole->isActive());
-			return true;
-		}
-
-		if (!mConsole->injectKeyPress(e)) {*/
-			if(e.key == KC_W) {
-				mForward = true;
-				return true;
-			} else if(e.key == KC_S) {
-				mBackward = true;
-				return true;
-			} else if(e.key == KC_A) {
-				mLeft = true;
-				return true;
-			} else if(e.key == KC_D) {
-				mRight = true;
-				return true;
-			} else if (e.key == KC_SYSRQ || e.key == KC_F5) {
-				mScreenShot = true;
-				return true;
-			} else if (e.key == KC_O) {
-				mSceneDisplay = true;
-				return true;
-			} else if (e.key == KC_P) {
-				mPortalDisplay = true;
-				return true;
-			} else return true;
-		/* } else {
-			return true;
-		};*/
+	bool GamePlayState::keyPressed(const SDL_KeyboardEvent &e) {
+        if(e.keysym.sym == SDLK_w) {
+            mForward = true;
+            return true;
+        } else if(e.keysym.sym == SDLK_s) {
+            mBackward = true;
+            return true;
+        } else if(e.keysym.sym == SDLK_a) {
+            mLeft = true;
+            return true;
+        } else if(e.keysym.sym == SDLK_d) {
+            mRight = true;
+            return true;
+        } else if (e.keysym.sym == SDLK_PRINTSCREEN || e.keysym.sym == SDLK_F5) {
+            mScreenShot = true;
+            return true;
+        } else if (e.keysym.sym == SDLK_o) {
+            mSceneDisplay = true;
+            return true;
+        } else if (e.keysym.sym == SDLK_p) {
+            mPortalDisplay = true;
+            return true;
+        } else return true;
 	}
 
-	bool GamePlayState::keyReleased( const OIS::KeyEvent &e ) {
-		/*if (!mConsole->isActive()) {*/
-			if(e.key == KC_W) {
-				mForward = false;
-				return true;
-			} else if(e.key == KC_S) {
-				mBackward = false;
-				return true;
-			} else if(e.key == KC_A) {
-				mLeft = false;
-				return true;
-			} else if(e.key == KC_D) {
-				mRight = false;
-				return true;
-			} else	if( e.key == KC_ESCAPE ) {
-        			requestTermination();
-				return true;
-			} else  if (e.key == KC_I) {
-				mShadows = !mShadows;
+    bool GamePlayState::keyReleased(const SDL_KeyboardEvent &e) {
+        if(e.keysym.sym == SDLK_w) {
+            mForward = false;
+            return true;
+        } else if(e.keysym.sym == SDLK_s) {
+            mBackward = false;
+            return true;
+        } else if(e.keysym.sym == SDLK_a) {
+            mLeft = false;
+            return true;
+        } else if(e.keysym.sym == SDLK_d) {
+            mRight = false;
+            return true;
+        } else if(e.keysym.sym == SDLK_ESCAPE) {
+            requestTermination();
+            return true;
+        } else if (e.keysym.sym == SDLK_i) {
+            mShadows = !mShadows;
 
-				if (mShadows)
-					mSceneMgr->setShadowTechnique(SHADOWTYPE_TEXTURE_MODULATIVE);
-				else
-					mSceneMgr->setShadowTechnique(SHADOWTYPE_NONE);
-			}
+            if (mShadows)
+                mSceneMgr->setShadowTechnique(SHADOWTYPE_TEXTURE_MODULATIVE);
+            else
+                mSceneMgr->setShadowTechnique(SHADOWTYPE_NONE);
+        }
 
-			return true;
-		/*} else return true;*/
-	}
+        return true;
+    }
 
-	bool GamePlayState::mouseMoved( const OIS::MouseEvent &e ) {
-		// mRi->setPosition(e.state.X.abs, e.state.Y.abs);
-		/*mRl1->setPosition(e.state.X.abs, e.state.Y.abs);
-		mRl2->setPosition(e.state.X.abs, e.state.Y.abs + 12);
-		*/
-
-		mRotX -= Degree( e.state.X.rel * 20.00);
+	bool GamePlayState::mouseMoved(const SDL_MouseMotionEvent &e) {
+		mRotX -= Degree( e.xrel );
 		// use Y axis invert
-		mRotY -= Degree( e.state.Y.rel * 20.00 * mRotateYFactor);
+		mRotY -= Degree( e.yrel * mRotateYFactor);
 		return false;
 	}
 
-	bool GamePlayState::mousePressed( const OIS::MouseEvent &e, OIS::MouseButtonID id ) {
+	bool GamePlayState::mousePressed(const SDL_MouseButtonEvent &e) {
 		return false;
 	}
 
-	bool GamePlayState::mouseReleased( const OIS::MouseEvent &e, OIS::MouseButtonID id ) {
+	bool GamePlayState::mouseReleased(const SDL_MouseButtonEvent &e) {
 		return false;
-	}
-
-	bool GamePlayState::axisMoved(const OIS::JoyStickEvent &arg, int axis)
-	{
-		return false;
-	}
-
-	bool GamePlayState::povMoved(const OIS::JoyStickEvent &e, int pov)
-	{
-		if ((e.state.mPOV[pov].direction & e.state.mPOV[pov].North) != 0)
-			mForward = true;
-		else
-			mForward = false;
-
-		if ((e.state.mPOV[pov].direction & e.state.mPOV[pov].South) != 0)
-			mBackward = true;
-		else
-			mBackward = false;
-
-		if ((e.state.mPOV[pov].direction & e.state.mPOV[pov].East) != 0)
-			mRight = true;
-		else
-			mRight = false;
-
-		if ((e.state.mPOV[pov].direction & e.state.mPOV[pov].West) != 0)
-			mLeft = true;
-		else
-			mLeft = false;
-
-		return true;
-	}
-	
-	bool GamePlayState::buttonPressed(const OIS::JoyStickEvent &arg, int button)
-	{
-		return true;
-	}
-	
-	bool GamePlayState::buttonReleased(const OIS::JoyStickEvent &arg, int button)
-	{
-		if(button == 0) 
-			requestTermination();
-		return true;
 	}
 
 	void GamePlayState::commandExecuted(std::string command, std::string parameters) {
@@ -610,4 +545,3 @@ namespace Opde {
 	}
 
 }
-
